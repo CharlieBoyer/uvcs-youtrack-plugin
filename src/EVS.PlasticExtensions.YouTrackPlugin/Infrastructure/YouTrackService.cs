@@ -232,7 +232,7 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Infrastructure
       }
       catch (Exception e)
       {
-        _log.Warn($"Failed to verify configuration against host '{pConfig.HostUri}'.", e);
+        logVerificationFailure(pConfig.HostUri, e);
         throw new ApplicationException($"Failed to authenticate against the host. Message: {e.Message}", e);
       }
     }
@@ -248,7 +248,7 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Infrastructure
       }
       catch (Exception e)
       {
-        _log.Warn($"Failed to verify configuration against host '{pConfig.HostUri}'.", e);
+        logVerificationFailure(pConfig.HostUri, e);
         throw new ApplicationException($"Failed to authenticate against the host. Message: {e.Message}", e);
       }
     }
@@ -265,22 +265,25 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Infrastructure
       var nl = Environment.NewLine;
       var mdComment = $"*PSCM - CODE COMMIT #{pChangeSetId}*";
 
-      var changeSetUriBuilder = new UriBuilder(pWebGui);
-      if (string.IsNullOrEmpty(changeSetUriBuilder.Scheme) ||
-          (!changeSetUriBuilder.Scheme.Equals("https", StringComparison.CurrentCultureIgnoreCase) &&
-           !changeSetUriBuilder.Scheme.Equals("http", StringComparison.CurrentCultureIgnoreCase)))
-        changeSetUriBuilder.Scheme = "http";
-
-      changeSetUriBuilder.Path += $"repositories/{pRepository}/changesets/{pChangeSetId}";
-
-      var tildes = "---";
-
       var commentBuilder = new StringBuilder();
       commentBuilder.Append($"{pComment}{nl}{nl}");
-      commentBuilder.Append($"{tildes}{nl}");
-      commentBuilder.Append($"[{mdComment}]({changeSetUriBuilder}){nl}");
-      //commentBuilder.Append($"{{monospace}}");
-      //commentBuilder.Append($"{{monospace}}");
+      commentBuilder.Append($"---{nl}");
+
+      if (pWebGui != null)
+      {
+        var changeSetUriBuilder = new UriBuilder(pWebGui);
+        if (string.IsNullOrEmpty(changeSetUriBuilder.Scheme) ||
+            (!changeSetUriBuilder.Scheme.Equals("https", StringComparison.CurrentCultureIgnoreCase) &&
+             !changeSetUriBuilder.Scheme.Equals("http", StringComparison.CurrentCultureIgnoreCase)))
+          changeSetUriBuilder.Scheme = "http";
+
+        changeSetUriBuilder.Path += $"repositories/{pRepository}/changesets/{pChangeSetId}";
+        commentBuilder.Append($"[{mdComment}]({changeSetUriBuilder}){nl}");
+      }
+      else
+      {
+        commentBuilder.Append($"{mdComment}{nl}");
+      }
 
       return commentBuilder.ToString();
     }
@@ -298,7 +301,30 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Infrastructure
       var password = pConfig.GetDecryptedPassword();
       var serverUrl = pConfig.HostUri.ToString();
       //TODO: must be an api (starts with "perm:")
-      return new BearerTokenConnection(serverUrl, password);
+      // YouTrackSharp 2022.3.1's BearerTokenConnection also probes the Hub API,
+      // which requires an admin-scoped token. This extension only needs YouTrack API access.
+      return new YouTrackBearerTokenConnection(serverUrl, password);
+    }
+
+    private static void logVerificationFailure(Uri hostUri, Exception exception)
+    {
+      var apiError = exception is AggregateException aggregate
+        ? aggregate.Flatten().InnerExceptions.OfType<YouTrackErrorException>().FirstOrDefault()
+        : exception as YouTrackErrorException;
+
+      if (apiError == null)
+      {
+        _log.Warn($"Failed to verify configuration against host '{hostUri}'.", exception);
+        return;
+      }
+
+      var response = apiError.Response ?? string.Empty;
+      if (response.Length > 1024)
+        response = response.Substring(0, 1024);
+
+      _log.Warn(
+        $"Failed to verify configuration against host '{hostUri}'. YouTrack returned HTTP {apiError.StatusCode}: {response}",
+        exception);
     }
 
     private static void throwErrorIfRequiredStringSettingIsMissing(string pSettingValue, string pSettingName)
@@ -321,7 +347,6 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Infrastructure
         throw new ApplicationException(string.Format("YouTrack setting '{0}' cannot be null or empty!",
           ConfigParameterNames.HostUri));
 
-      throwErrorIfRequiredStringSettingIsMissing(pConfig.BranchPrefix, ConfigParameterNames.BranchPrefix);
       throwErrorIfRequiredStringSettingIsMissing(pConfig.AuthToken, ConfigParameterNames.AuthToken);
     }
 

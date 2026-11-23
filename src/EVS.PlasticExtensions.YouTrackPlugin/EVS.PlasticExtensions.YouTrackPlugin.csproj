@@ -1,27 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <AssemblyName>PlasticExtensions.YouTrackPlugin</AssemblyName>
+    <AssemblyName>youtrackextension</AssemblyName>
     <SccProjectName>Plastic SCM</SccProjectName>
     <SccLocalPath>Plastic SCM</SccLocalPath>
     <SccAuxPath>Plastic SCM</SccAuxPath>
     <SccProvider>Plastic SCM Source Control Service:{774e58ba-f1b9-40a7-b676-834fa2c220fe}</SccProvider>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <Configurations>Debug;Debug-Plastic;Release</Configurations>
-    <DocumentationFile>PlasticExtensions.YouTrackPlugin.XML</DocumentationFile>
+    <DocumentationFile>youtrackextension.XML</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <UVCSIssueTrackerInterfacePath Condition="Exists('$(UVCSClientDirectory)\issuetrackerinterface.dll')">$(UVCSClientDirectory)\issuetrackerinterface.dll</UVCSIssueTrackerInterfacePath>
+    <UVCSIssueTrackerInterfacePath Condition="!Exists('$(UVCSClientDirectory)\issuetrackerinterface.dll')">$(MSBuildProjectDirectory)\..\..\lib\pscm\issuetrackerinterface.dll</UVCSIssueTrackerInterfacePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug-Plastic|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>C:\Program Files\PlasticSCM5\client\extensions\youtrack\</OutputPath>
+    <OutputPath>bin\Debug-Plastic\</OutputPath>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <AssemblyTitle>PlasticExtensions.YouTrackPlugin</AssemblyTitle>
+    <AssemblyTitle>youtrackextension</AssemblyTitle>
     <Company>Diego H. Bustamante</Company>
-    <Product>PlasticExtensions.YouTrackPlugin</Product>
+    <Product>youtrackextension</Product>
     <AssemblyVersion>3.0.0.0</AssemblyVersion>
     <FileVersion>3.0.0.0</FileVersion>
   </PropertyGroup>
@@ -29,6 +35,7 @@
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="Microsoft.CSharp" />
     <PackageReference Include="Microsoft.NETCore.Platforms" />
+    <PackageReference Include="log4net" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="System.ComponentModel.Composition" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" />
@@ -37,15 +44,15 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="issuetrackerinterface">
-      <HintPath>..\..\lib\pscm\issuetrackerinterface.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="log4net">
-      <HintPath>..\..\lib\pscm\log4net.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>$(UVCSIssueTrackerInterfacePath)</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="utils">
       <HintPath>..\..\lib\pscm\utils.dll</HintPath>
+      <Private>True</Private>
     </Reference>
   </ItemGroup>
+  <Target Name="AddIssueTrackerInterfaceToPublishedDeps" AfterTargets="Publish">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\AddIssueTrackerInterfaceToDeps.ps1&quot; &quot;$(PublishDir)$(AssemblyName).deps.json&quot; &quot;$(UVCSIssueTrackerInterfacePath)&quot;" />
+  </Target>
 </Project>

@@ -22,6 +22,20 @@ namespace EVS.PlasticExtensions.Tests
     public class YouTrackServiceTests
     {
         [Test]
+        public void BearerTokenConnection_UsesTokenWithoutHubAuthenticationProbe()
+        {
+            const string token = "perm:test-token";
+            var connection = new YouTrackBearerTokenConnection("http://127.0.0.1:1/", token);
+
+            var apiClient = connection.GetAuthenticatedApiClient().GetAwaiter().GetResult();
+            var httpClient = connection.GetAuthenticatedRawClient().GetAwaiter().GetResult();
+
+            Assert.IsNotNull(apiClient);
+            Assert.AreEqual("Bearer", httpClient.DefaultRequestHeaders.Authorization.Scheme);
+            Assert.AreEqual(token, httpClient.DefaultRequestHeaders.Authorization.Parameter);
+        }
+
+        [Test]
         [Category("Integration")]
         public void GetAuthenticatedUser_ShouldReturnUserWithEmail()
         {
@@ -236,6 +250,20 @@ namespace EVS.PlasticExtensions.Tests
         {
             var msg = "*PSCM - BRANCH CREATED*";
             Assert.AreEqual(msg, YouTrackService.GetBranchCreationMessage());
+        }
+
+        [Test]
+        public void FormatComment_WithoutWebGuiUrl_OmitsLinkButKeepsCommitReference()
+        {
+            const long changeSetId = 42;
+            const string comment = "Check-in message";
+
+            var generatedComment = YouTrackService.FormatComment(
+                "server", "repository", null, "feature/SOR-42", changeSetId, comment, Guid.NewGuid());
+
+            StringAssert.Contains(comment, generatedComment);
+            StringAssert.Contains($"*PSCM - CODE COMMIT #{changeSetId}*", generatedComment);
+            StringAssert.DoesNotContain("](", generatedComment);
         }
     }
 }

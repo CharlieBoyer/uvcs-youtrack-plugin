@@ -27,7 +27,7 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Core.Services.Impl
             _log.Debug("YouTrackExtensionConfigFacade: configured ctor called");
             Config = pConfig;
             UserId = getValidParameterValue(Config, ConfigParameterNames.UserId, pDefaultValue: "");
-            BranchPrefix = getValidParameterValue(Config, ConfigParameterNames.BranchPrefix, pDefaultValue: "yt_");
+            BranchPrefix = getValidParameterValue(Config, ConfigParameterNames.BranchPrefix, pDefaultValue: "yt_", pAllowEmpty: true);
             HostUri = getValidParameterValue(Config, ConfigParameterNames.HostUri, pDefaultValue: new Uri("http://issues.domain.com"), converter: new UriTypeConverter());
             AuthToken = getValidParameterValue(Config, ConfigParameterNames.AuthToken, pDefaultValue: string.Empty);
             ShowIssueStateInBranchTitle = getValidParameterValue
@@ -36,8 +36,8 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Core.Services.Impl
             _ignoreIssueStateForBranchTitle = getValidParameterValue
                 (Config, ConfigParameterNames.ClosedIssueStates, pDefaultValue: "Completed");
             _usernameMapping = getValidParameterValue(Config, ConfigParameterNames.UsernameMapping, pDefaultValue: "plasticusr1:ytusername1;plasticusr2:ytusername2");
-            WebGuiRootUrl = getValidParameterValue
-                (Config, ConfigParameterNames.WebGuiRootUrl, pDefaultValue: new Uri("http://plastic-gui.domain.com:7178/"), converter: new UriTypeConverter());
+            WebGuiRootUrl = getValidParameterValue<Uri>
+                (Config, ConfigParameterNames.WebGuiRootUrl, pDefaultValue: null, converter: new UriTypeConverter());
             WorkingMode = getValidParameterValue(Config, nameof(ExtensionWorkingMode), pDefaultValue: ExtensionWorkingMode.TaskOnBranch);
             _createBranchIssueQuery = getValidParameterValue
                 (Config, ConfigParameterNames.CreateBranchIssueQuery, pDefaultValue: "#unresolved order by: updated desc");
@@ -101,7 +101,7 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Core.Services.Impl
                 new IssueTrackerConfigurationParameter
                 {
                     Name = ConfigParameterNames.WebGuiRootUrl,
-                    Value = WebGuiRootUrl.ToString(),
+                    Value = WebGuiRootUrl?.ToString() ?? string.Empty,
                     Type = IssueTrackerConfigurationParameterType.Text,
                     IsGlobal = true
                 },
@@ -170,7 +170,8 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Core.Services.Impl
         }
 
         protected static T getValidParameterValue<T>
-            (IssueTrackerConfiguration pConfig, string pParamName, TypeConverter converter = null, T pDefaultValue = default(T))
+            (IssueTrackerConfiguration pConfig, string pParamName, TypeConverter converter = null, T pDefaultValue = default(T),
+                bool pAllowEmpty = false)
         {
             if (string.IsNullOrEmpty(pParamName))
                 throw new ApplicationException("The parameter name cannot be null or empty!");
@@ -183,7 +184,7 @@ namespace EVS.PlasticExtensions.YouTrackPlugin.Core.Services.Impl
 
             var configValue = pConfig.GetValue(pParamName);
 
-            if (string.IsNullOrEmpty(configValue))
+            if (configValue == null || (!pAllowEmpty && configValue.Length == 0))
                 return pDefaultValue;
             
             try
