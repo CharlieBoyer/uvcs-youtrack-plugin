@@ -104,7 +104,7 @@ namespace EVS.PlasticExtensions.YouTrackPlugin
       {
         await _ytService.AddCommentToIssue
         (task.Id, pChangeset.RepositoryServer, pChangeset.Repository,
-            _config.WebGuiRootUrl ?? new Uri($"http://{pChangeset.RepositoryServer}"),
+            _config.WebGuiRootUrl,
             pChangeset.Branch, pChangeset.Id, pChangeset.Comment, pChangeset.Guid);
       }
     }

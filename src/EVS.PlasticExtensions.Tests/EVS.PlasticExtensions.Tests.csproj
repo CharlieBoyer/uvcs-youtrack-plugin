@@ -13,7 +13,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="issuetrackerinterface">
-      <HintPath>..\..\lib\pscm\issuetrackerinterface.dll</HintPath>
+      <HintPath Condition="Exists('$(UVCSClientDirectory)\issuetrackerinterface.dll')">$(UVCSClientDirectory)\issuetrackerinterface.dll</HintPath>
+      <HintPath Condition="!Exists('$(UVCSClientDirectory)\issuetrackerinterface.dll')">..\..\lib\pscm\issuetrackerinterface.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System.Configuration" />
   </ItemGroup>
@@ -21,6 +23,7 @@
     <ProjectReference Include="..\EVS.PlasticExtensions.YouTrackPlugin\EVS.PlasticExtensions.YouTrackPlugin.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="Microsoft.CSharp" />
     <PackageReference Include="Microsoft.NETCore.Platforms" />
@@ -29,6 +32,7 @@
     <PackageReference Include="NETStandard.Library" VersionOverride="2.0.3" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit3TestAdapter" />
     <PackageReference Include="System.AppContext" />
     <PackageReference Include="System.Collections" />
     <PackageReference Include="System.Collections.Concurrent" />
